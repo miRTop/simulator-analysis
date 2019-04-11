@@ -1,0 +1,92 @@
+from os.path import join
+
+# Globals ---------------------------------------------------------------------
+
+# Full path to a folder that holds all of your FASTQ files.
+FASTQ_DIR = 'raw/round2'
+# A Snakemake regular expression matching the forward mate FASTQ files.
+SAMPLES = ["simulated_miRNA_BF"]
+FASTQS = expand(join(FASTQ_DIR, '{sample}.fa'), sample = SAMPLES)
+
+# Patterns for the 1st mate and the 2nd mate using the 'sample' wildcard.
+FASTA = "reference22/hairpin.fa"
+GFF = "reference22/hsa.gff3"
+
+
+rule all:
+    input:
+        fixed = 'reference22/hairpin_atcg_hsa.fa',
+        seqbuster = expand('output/seqbuster/{sample}.mirna', sample = SAMPLES),
+        gff = 'output/gff/simulated_miRNA_BF.gff',
+        count = 'output/counts/simulated_miRNA_BF.tsv',
+        countseqbuster = 'output/seqbuster/simulated_miRNA_BF.tsv',
+        sam = expand(join('output/sam', '{sample}.sam'), sample = SAMPLES)
+
+
+rule reference:
+    input:
+        fasta = FASTA
+    output:
+        fixed = 'reference22/hairpin_atcg_hsa.fa'
+    shell:
+        '''
+        cat {input.fasta} | awk '{{if ($0~/>hsa/){{name=$0; print name}} else if ($0~/^>/){{name=0}};if (name!=0 && $0!~/^>/){{print $0;}}}} | sed 's/U/T/g' > {output.fixed}
+        '''
+
+rule map:
+    input:
+        fasta = 'reference22/hairpin_atcg_hsa.fa',
+        reads = FASTQS
+    output:
+        'output/sam/{sample}.sam'
+    shell:
+        'razers3 -dr 0 -i 80 -rr 90 -f -o {output} {input.fasta} {input.reads}'
+
+rule seqbuster:
+    input:
+        db = 'reference22',
+        reads = FASTQS
+    output:
+        out = "output/seqbuster/{sample}.mirna",
+    shell:
+        'miraligner   -Xms92m -Xmx124g -sub 1 -trim 3 -add 3 -minl 16 -s hsa -i {input.reads} -db {input.db} -o output/seqbuster/simulated_miRNA_BF'
+
+rule mirtopseqbuster:
+    input:
+        fasta = 'reference22/hairpin_atcg_hsa.fa',
+        gff = GFF,
+        mirna = expand('output/seqbuster/{sample}.mirna', sample = SAMPLES)
+    output:
+        'output/seqbuster/simulated_miRNA_BF.gff'
+    shell:
+        'mirtop gff --keep-name --low-memory --sps hsa --hairpin {input.fasta} --gtf {input.gff} -o output/seqbuster --format seqbuster {input.mirna}'
+        
+rule countseqbuster:
+    input:
+        fasta = 'reference22/hairpin_atcg_hsa.fa',
+        gff = GFF,
+        mirtop = 'output/seqbuster/simulated_miRNA_BF.gff'
+    output:
+        'output/seqbuster/simulated_miRNA_BF.tsv'
+    shell:
+        'mirtop  counts  --sps hsa --gff {input.mirtop} --add-extra --hairpin {input.fasta} --gtf {input.gff} --out output/seqbuster'
+        
+rule mirtopsam:
+    input:
+        fasta = 'reference22/hairpin_atcg_hsa.fa',
+        gff = GFF,
+        sam = expand('output/sam/{sample}.sam', sample = SAMPLES)
+    output:
+        'output/gff/simulated_miRNA_BF.gff'
+    shell:
+        'mirtop gff --low-memory --keep-name --sps hsa --hairpin {input.fasta} --gtf {input.gff} -o output/gff {input.sam}'
+
+rule countsam:
+    input:
+        fasta = 'reference22/hairpin_atcg_hsa.fa',
+        gff = GFF,
+        mirtop = 'output/gff/simulated_miRNA_BF.gff'
+    output:
+        'output/counts/simulated_miRNA_BF.tsv'
+    shell:
+        'mirtop  counts  --sps hsa --gff {input.mirtop} --add-extra --hairpin {input.fasta} --gtf {input.gff} --out output/counts'

@@ -1,0 +1,14 @@
+conda3/*
+debug/*
+logs/*
+mirtop/*
+output.round1/*
+output.round2/*
+raw/*
+reference/*
+reference22/*
+*_logs*
+*.snakemake*
+*.swo
+*.swp
+scripts/test/
