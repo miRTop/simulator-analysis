@@ -1,10 +1,10 @@
 #!/bin/sh
 #SBATCH -p priority
-#SBATCH -J gff
+#SBATCH -J features
 #SBATCH -o run.o
 #SBATCH -e run.e
 #SBATCH -t 00-73:59:00
 #SBATCH -c 1
-#SBATCH --mem=16000
+#SBATCH --mem=24000
 
-snakemake -p --stats run2.stats -s bam_to_gff.snakefile
+snakemake -p --use-conda -s bam_to_feature.snakefile

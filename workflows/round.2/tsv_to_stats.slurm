@@ -1,5 +1,5 @@
 #!/bin/sh
-#SBATCH -p priority
+#SBATCH -p medium
 #SBATCH -J stats
 #SBATCH -o tsv_to_stats_logs/run.o
 #SBATCH -e tsv_to_stats_logs/run.e
