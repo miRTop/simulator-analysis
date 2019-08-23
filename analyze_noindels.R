@@ -3,7 +3,7 @@ library(tidyverse)
 ###########
 # counts
 ###########
-labs= c("missed","<50%x", "<30%x", "<10%x","+/-10%x", ">10%x", ">30%x", ">50%x")
+labs= c("missed","<50%x", "30-50%x", "10-30%x","+/-10%x", "10-30%x", "30-50%x", ">50%x")
 
 read_files = function(folder){
     # mirtop = list.files(file.path(folder, "stats"), "counts", full.names = T) %>%
@@ -17,7 +17,7 @@ read_files = function(folder){
     #             filter(mirna!="miRNA")
     #     }) %>% bind_rows() 
 
-    featurecounts = list.files(file.path(folder, "features"), ".txt$", full.names = T) %>%
+    featurecounts = list.files(file.path(folder, "noindels","features"), ".txt$", full.names = T) %>%
         lapply(., function(fn){
             name = gsub("\\.txt","",basename(fn))
             read_tsv(fn, skip = 1) %>%
@@ -26,7 +26,7 @@ read_files = function(folder){
                 mutate(tool=name)
         }) %>% bind_rows()
     
-    features_multiON=list.files(file.path(folder, "features_multiON"), ".txt$", full.names = T) %>%
+    features_multiON=list.files(file.path(folder, "noindels","features_multiON"), ".txt$", full.names = T) %>%
         lapply(., function(fn){
             name = gsub("\\.txt","",basename(fn))
             read_tsv(fn, skip = 1) %>%
