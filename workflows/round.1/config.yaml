@@ -1,0 +1,6 @@
+tools : ["bwa-pre", "seqbuster", "razers3-pre", "ShortStack", "GSNAP", "BWAa", "Bowtie1", "Bowtie2", "STAR", "Manatee"] # STAR
+tools_features : ["ShortStack", "GSNAP", "BWAa", "Bowtie1", "Bowtie2", "STAR"] # STAR
+norazers3: 0
+noseqbusterfull: 0
+noquant: 0
+round: "S1"
