@@ -12,3 +12,4 @@ reference22/*
 *.swo
 *.swp
 scripts/test/
+.Rproj.user
