@@ -1,49 +1,78 @@
 from __future__ import print_function
 
 import argparse
+import re
 import os
 from collections import defaultdict, Counter
 
 
 def _parse_read_name(name):
-    name = name.replace("no_mod", "nomod")
-    name = name.replace("_indel_", "_inside_indel")
-    name = name.replace("_SNP_", "_inside_SNP")
+    # name = name.replace("no_mod", "nomod")
+    # name = name.replace("_indel_", "_inside_indel")
+    # name = name.replace("_SNP_", "_inside_SNP")
     parts = name.split("_")
     anno = []
     name = name.lower()
-    if name.find("nomod") > -1:
+    size = 0
+    mir = parts[0]
+    if name.find("can") > -1:
         anno.append("reference")
-    if name.find("indel") > -1:
-        anno.append("indel")
-    if name.find("SNP") > -1:
-        anno.append("SNP")
-    if name.find("3prime_templated") > -1:
-        anno.append("3prime_templated")
-    if name.find("5prime_templated") > -1:
-        anno.append("5prime_templated")
-    if name.find("3prime_loss") > -1:
-        anno.append("3prime_loss")
-    if name.find("5prime_loss") > -1:
-        anno.append("5prime_loss")
-    if name.find("3prime_addition") > -1:
-        anno.append("3prime_non")
-    if name.find("5prime_addition") > -1:
-        anno.append("5prime_non")
-    if name.find("3prime_non") > -1:
-        anno.append("3prime_non")
-    if name.find("5prime_non") > -1:
-        anno.append("5prime_non")
-    info = {'mir': parts[0],
-            'type': ":".join(anno)}
+        size = 0
+    if name.find("ins") > -1:
+        anno.append("ins")
+        size += 1
+    if name.find("del") > -1:
+        anno.append("del")
+        size += 1
+    if name.find("snp") > -1:
+        anno.append("snp")
+        size += 1
+    if name.find("3p-ta") > -1:
+        anno.append("3p-ta")
+        r = re.search(r"3p-ta[-_][aAtTcGgC]+", name)
+        # import pdb; pdb.set_trace()
+        size += len(r.group(0).split("-")[-1])
+    if name.find("5p-ta") > -1:
+        anno.append("5p-ta")
+        r = re.search(r"5p-ta[-_][aAtTcGgC]+", name)
+        size += len(r.group(0).split("-")[-1])
+    if name.find("3p-los") > -1:
+        anno.append("3p-los")
+        r = re.search(r"3p-los[-_][aAtTgGcC]+", name)
+        size += len(r.group(0).split("-")[-1])
+    if name.find("5p-los") > -1:
+        anno.append("5p-los")
+        r = re.search(r"5p-los[-_][aAtTgGcC]+", name)
+        size += len(r.group(0).split("-")[-1])
+    if name.find("3p-nta") > -1:
+        anno.append("3p-nta")
+        r = re.search(r"3p-nta[-_][aAtTgGcC]+", name)
+        try:
+            size += len(r.group(0).split("-")[-1])
+        except AttributeError:
+            print(name)
+            raise ValueError("wrong name: %s" %name)
+    if name.find("5p-nta") > -1:
+        anno.append("5p-nta")
+        r = re.search(r"5p-nta[-_][aAtTgGcC]+", name)
+        size += len(r.group(0).split("-")[-1])
+    if not anno and not name.startswith("hsa-"):
+        anno.append("other")
+        size = "NA"
+        mir = "other"
+    info = {'mir': mir,
+            'type': ":".join(anno),
+            'size': size}
+    if not anno:
+        raise ValueError("name is unexpected: %s" % name)
     return info
 
 
-def _parse_line(line, memory):
+def _parse_line(line):
     # synthetic = _parse_read_name(line)
     parts = line.split()
     mirna = parts[2]
-    memory[parts[1]] += 1
+    # memory[parts[1]] += 1
     # return {'mirna': mirna, 'name': parts[1]}
     return [mirna, parts[1]]
 
@@ -64,16 +93,21 @@ seen = set()
 
 with open(args.input) as inh:
     for line in inh:
-        if line.startswith(">"):
-            synthetics[line.strip()[1:]] = 0
+        if line.startswith(">hsa-"):
+            # synthetics[line.strip()[1:]] = 0
             seen.add(line.strip()[1:])
+
+print("Total input %s" % len(seen))
 
 summary = defaultdict(list)
 with open(args.counts) as inh:
+    inh.readline()
     for line in inh:
-        data = _parse_line(line, synthetics)
+        data = _parse_line(line)
         _parse_read_name(data[1])
         summary[data[1]].append(data[0])
+
+print("Total counted %s" % len(summary))
 
 results = defaultdict(Counter)
 for read in  summary:
@@ -95,13 +129,13 @@ for read in  summary:
     else:
         counts_all[hit] += 1
         detected = "multiple"
-    results[(auc, detected)][parsed["type"]] += 1
+    results[(auc, detected)]["%s-%s" % (parsed["type"], parsed["size"])] += 1
 
 del summary
 
 for name in seen:
     parsed = _parse_read_name(name)
-    results[("FN","None")][parsed["type"]] += 1
+    results[("FN","None")]["%s-%s" % (parsed["type"], parsed["size"])] += 1
 
 del seen
 

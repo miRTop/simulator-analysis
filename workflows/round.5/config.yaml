@@ -1,0 +1,6 @@
+tools : ["bowtie1", "bowtie2", "bwa", "shortstack", "gsnap_m3", "gsnap_m5", "star_default", "star_short", "seqbuster-quant", "razers3"]
+tools_features : ["bowtie1", "bowtie2", "bwa", "shortstack", "gsnap_m3", "gsnap_m5", "star_default", "star_short"]
+norazers3: 0
+noseqbusterfull: 1
+noquant: 0
+round: "S5"
