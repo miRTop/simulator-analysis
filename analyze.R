@@ -6,7 +6,7 @@ library(tidyverse)
 labs= c("missed","<50%x", "<30%x", "<10%x","+/-10%x", ">10%x", ">30%x", ">50%x")
 
 read_files = function(folder, simulated, razers=T, bwa=T, seqbuster=T,
-                      srnabench=T, manatee=T, shortstack=T){
+                      srnabench=T, manatee=T, shortstack=T, mirdeep=T){
     universe = as.character(simulated$Transcript)
     
     featurecounts = list.files(file.path(folder, "features"),
@@ -16,7 +16,7 @@ read_files = function(folder, simulated, razers=T, bwa=T, seqbuster=T,
             name = gsub("\\.txt","",basename(fn))
             read_tsv(fn, skip = 1) %>%
                 .[,c(1,7)] %>%
-                set_names("mirna", "fcountsU") %>%
+                set_names("mirna", "fcu") %>%
                 full_join(simulated, by=c("mirna"="Transcript")) %>%
                 rename(real = Count) %>%
                 gather(method, counts, -mirna, -real) %>% 
@@ -31,7 +31,7 @@ read_files = function(folder, simulated, razers=T, bwa=T, seqbuster=T,
             name = gsub("\\.txt","",basename(fn))
             read_tsv(fn, skip = 1) %>%
                 .[,c(1,7)] %>%
-                set_names("mirna", "fcountsM") %>%
+                set_names("mirna", "fcm") %>%
                 full_join(simulated, by=c("mirna"="Transcript")) %>%
                 rename(real = Count) %>%
                 gather(method, counts, -mirna, -real) %>% 
@@ -43,26 +43,26 @@ read_files = function(folder, simulated, razers=T, bwa=T, seqbuster=T,
     
      df = bind_rows(featurecounts, features_multiON) %>% 
          filter(!(tool %in% c("razers3-pre", "ShortStack", "manatee", "bwa-pre")))
-
+    universe = unique(df$mirna)
     # browser()
     # df = df %>% gather(method, counts, -mirna, -tool) %>% 
     #     filter(counts>0)
     mi_counts = . %>% 
         group_by(mirna) %>% 
-        summarise(internalc=sum(internalc)) %>% 
+        summarise(custom=sum(custom)) %>% 
         ungroup() %>% 
         full_join(simulated, by=c("mirna"="Transcript")) %>%
         rename(real = Count) %>% 
         gather(method, counts, -mirna, -real) %>% 
         mutate(counts = ifelse(is.na(counts), 0, counts))
+   # browser()
     if (razers==T){
         df = bind_rows(df, 
                        read_tsv(file.path(folder, "stats/razers3-pre_counts.tsv"),
                                 col_names = F) %>% 
                            group_by(X1) %>% 
                            summarise(internalc=sum(X3)) %>% 
-                           set_names("mirna", "internalc") %>% 
-                           filter(mirna %in% universe) %>% 
+                           set_names("mirna", "custom") %>% 
                            mi_counts() %>% 
                            mutate(tool = "razers3-pre")
         )
@@ -73,8 +73,7 @@ read_files = function(folder, simulated, razers=T, bwa=T, seqbuster=T,
                                 col_names = F) %>% 
                            group_by(X1) %>% 
                            summarise(internalc=sum(X3)) %>% 
-                           set_names("mirna", "internalc") %>% 
-                           filter(mirna %in% universe) %>% 
+                           set_names("mirna", "custom") %>% 
                            mi_counts() %>% 
                            mutate(tool = "bwa-pre")
         )
@@ -85,8 +84,7 @@ read_files = function(folder, simulated, razers=T, bwa=T, seqbuster=T,
                                 col_names = T) %>% 
                            group_by(mir) %>% 
                            summarise(internalc=sum(freq)) %>% 
-                           set_names("mirna", "internalc") %>% 
-                           filter(mirna %in% universe) %>% 
+                           set_names("mirna", "custom") %>% 
                            mi_counts() %>% 
                            mutate(tool = "seqbuster")
         )
@@ -95,9 +93,7 @@ read_files = function(folder, simulated, razers=T, bwa=T, seqbuster=T,
         df = bind_rows(df, 
                        read_tsv(file.path(folder, "quant/srnabench.txt")) %>%  
                            .[,c(1,4)] %>% 
-                           set_names("mirna", "internalc") %>% 
-                           right_join(simulated[,"Transcript"],
-                                      by=c("mirna"="Transcript")) %>% 
+                           set_names("mirna", "custom") %>% 
                            mi_counts() %>% 
                            mutate(tool = "srnabench")
         )
@@ -106,9 +102,9 @@ read_files = function(folder, simulated, razers=T, bwa=T, seqbuster=T,
         df = bind_rows(df, 
                        read_tsv(file.path(folder, "quant/Manatee_counts.tsv")) %>% 
                            .[,c(1,3)] %>% 
-                           set_names("mirna", "internalc") %>% 
-                           filter(mirna %in% universe) %>% 
+                           set_names("mirna", "custom") %>% 
                            mi_counts() %>% 
+                           filter(mirna %in% universe) %>% 
                            mutate(tool = "manatee") 
         )
     }
@@ -116,13 +112,21 @@ read_files = function(folder, simulated, razers=T, bwa=T, seqbuster=T,
         df = bind_rows(df, 
                        read_tsv(file.path(folder, "quant/shortstack.txt")) %>% 
                            .[,c(2,4)] %>% 
-                           set_names("mirna", "internalc") %>% 
-                           filter(mirna %in% universe) %>% 
+                           set_names("mirna", "custom") %>% 
                            mi_counts() %>% 
-                           mutate(tool = "shorstack") 
+                           filter(mirna %in% universe) %>% 
+                           mutate(tool = "shortstack") 
         )
     }
-
+    if (mirdeep==T){
+        df = bind_rows(df, 
+                       read_tsv(file.path(folder, "quant/miRNAs_expressed_all_samples_miRDeep.csv")) %>% 
+                           .[,c(1,4)] %>% 
+                           set_names("mirna", "custom") %>% 
+                           mi_counts() %>% 
+                           mutate(tool = "mirdeep") 
+        )
+    }
         # read_tsv("data/round1/own/excert/readCounts_miRNAmature_sense.txt") %>% 
         #     separate_rows(ReferenceID, sep="\\|") %>% 
         #     separate(ReferenceID, into = "mirna", extra = "drop", sep=":") %>% 
@@ -178,9 +182,19 @@ r5 =read_files("data/output.S5", # output files
                    rename(Transcript=Transcipt) %>% 
                    filter(grepl("hsa-", Transcript))) # simulated
 
-
+#############################################################################
 allcounst = unique(paste(r0$tool, r0$method))
-levels = c(allcounst[grepl("intern", allcounst)], allcounst[!grepl("intern", allcounst)])
+levels = c(allcounst[grepl("custom", allcounst)], allcounst[!grepl("custom", allcounst)])
+# cols = c( "black",
+#           "orange3", "yellow3",
+#           "#addd8e", "deepskyblue3",
+#           "#addd8e","#edf8b1",
+#           "#feb24c", "grey")
+cols = c( "black",
+          "#de2d26", "#fc9272",
+          "#fee0d2", "#99d8c9",
+          "#deebf7","#9ecae1",
+          "#3182bd", "grey70")
 
 bind_rows(
     r0 %>% mutate(round="S0"),
@@ -206,11 +220,7 @@ bind_rows(
     mutate(tool_method = factor(paste(tool, method), level=levels)) %>% 
     ggplot(aes(tool_method, fill=fc)) +
     geom_bar() +
-    scale_fill_manual(values=c( "black",
-                                "orange3", "yellow3",
-                                "#addd8e", "deepskyblue3",
-                                "#addd8e","#edf8b1",
-                                "#feb24c", "grey")) +
+    scale_fill_manual(values=cols) +
     ggthemes::theme_base() +
     coord_flip() +
     facet_wrap(~round, nrow=1, scales = "free_x") + 
