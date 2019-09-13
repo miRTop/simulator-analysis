@@ -218,6 +218,9 @@ bind_rows(
            fc = ifelse(is.na(fc),"extra", fc),
            fc = factor(fc, levels=rev(c(labs, "extra")))) %>%  
     mutate(tool_method = factor(paste(tool, method), level=levels)) %>% 
+    write_csv("results/expression_accuracy.csv")
+
+read_csv("results/expression_accuracy.csv") %>% 
     ggplot(aes(tool_method, fill=fc)) +
     geom_bar() +
     scale_fill_manual(values=cols) +

@@ -103,7 +103,7 @@ full %>% filter(round=="isomirs")  %>%
     theme(axis.text.x = element_text(angle=90, vjust = 0.5, hjust = 1)) +
     facet_grid(size~isomir) +
     scale_fill_manual(values = c("grey", "orange", "blue", "orange4", "blue4")) +
-    ggsave("figures-local/S1-accuracy-nocomb-bysize.pdf", width=12, height = 6)
+    ggsave("results/S1-accuracy-nocomb-bysize.pdf", width=12, height = 6)
 
 full %>% filter(is_comb=="no", round!="sRNA")  %>% 
     mutate(isomir=paste(isomir,type)) %>% 
@@ -114,7 +114,7 @@ full %>% filter(is_comb=="no", round!="sRNA")  %>%
     coord_flip() +
     facet_wrap(~isomir, nrow=1) +
     scale_fill_manual(values = c("grey", "orange", "blue", "orange4", "blue4")) +
-    ggsave("figures-local/accuracy-nocomb.pdf", width=12, height = 6)
+    ggsave("results/accuracy-nocomb.pdf", width=12, height = 6)
 
 full %>% filter(is_comb=="yes") %>% 
     mutate(isomir=paste(isomir,type)) %>% 
@@ -126,18 +126,5 @@ full %>% filter(is_comb=="yes") %>%
     coord_flip() +
     facet_wrap(~isomir, nrow=1) +
     scale_fill_manual(values = c("grey", "orange", "blue", "orange4", "blue4")) +  
-    ggsave("figures-local/accuracy-comb.pdf", width=12, height = 6)
-
-#    
-
-
-bind_rows(r1,r2) %>% 
-    filter(isomir!="NA") %>% 
-    mutate(class=paste(hit, class)) %>% 
-    ggplot(aes(isomir, pct, fill=class)) + 
-    geom_bar(stat = "identity") +
-    theme(legend.position="bottom") + 
-    theme(axis.text.x = element_text(angle=90, vjust = 0.5, hjust = 1)) +
-    facet_wrap(~paste(tool, round), ncol=4) +
-    scale_fill_manual(values = c("grey", "orange", "blue", "orange4", "blue4"))  
+    ggsave("results/accuracy-comb.pdf", width=12, height = 6)
 
